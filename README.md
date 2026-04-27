@@ -243,7 +243,7 @@ For performance work, say so explicitly. `r-performance` loads on mentions of "s
 **Note: the `.claude` directory is a dotfolder and will not appear in Finder or Windows Explorer drag-and-drop. Use git on the command line.**
 
 ```bash
-git clone https://github.com/[your-org]/flode_code_styles.git
+git clone https://github.com/JonPayneEA/flode_code_styles.git
 cd /path/to/your/project
 
 # Copy configuration into your project
