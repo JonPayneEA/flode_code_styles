@@ -16,7 +16,7 @@ try {
   state.compactionCount = (state.compactionCount || 0) + 1;
 
   // Save a pre-compaction snapshot for continuity
-  const snapshotDir  = path.join(os.homedir(), ".claude", "ea-flood-r-skills", "snapshots");
+  const snapshotDir  = path.join(os.homedir(), ".claude", "flode_code_styles", "snapshots");
   const snapshotFile = path.join(snapshotDir, `pre-compact-${Date.now()}.json`);
 
   if (!fs.existsSync(snapshotDir)) {
