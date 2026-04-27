@@ -1,4 +1,4 @@
-# EA Flood Forecasting and Warning -- R Skills for Claude Code
+# EA Flood Forecasting and Warning - R Skills for Claude Code
 
 Claude Code configuration for the Environment Agency Flood Forecasting and Warning team. Encodes the team's R coding standards, governance framework, and domain-specific hydrological patterns.
 
@@ -72,7 +72,7 @@ Built on the structure of [ab604/claude-code-r-skills](https://github.com/ab604/
 ### Option 1: Copy to your project
 
 ```bash
-git clone https://github.com/[your-org]/ea-flood-r-skills.git
+git clone https://github.com/JonPayneEA/flode_code_styles.git
 
 # Copy Claude Code configuration
 cp -r ea-flood-r-skills/.claude/ /path/to/your/project/
