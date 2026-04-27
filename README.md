@@ -113,7 +113,7 @@ Agents are specialist sub-processes Claude Code can invoke for specific tasks. T
 
 Hooks are Node.js scripts that fire automatically at defined points in the Claude Code session lifecycle. They require no manual invocation -- they activate as soon as you open a project that contains this configuration. All hooks are advisory: they warn and inform but never block an operation.
 
-Hook state is stored in `~/.claude/ea-flood-r-skills/` in the user's home directory, not in the project. This means state persists across sessions and compactions without cluttering the repository.
+Hook state is stored in `~/.claude/flode_code_styles/` in the user's home directory, not in the project. This means state persists across sessions and compactions without cluttering the repository.
 
 ### How hooks work
 
@@ -160,11 +160,11 @@ Context management matters for long sessions. A compaction at a natural boundary
 
 ### `pre-compact`
 
-Fires before a `/compact` operation. Saves a state snapshot to `~/.claude/ea-flood-r-skills/snapshots/`, resets the tool use counter for the new context window, and keeps the five most recent snapshots. When the new context opens, `session-start` reads the persisted state and reports it.
+Fires before a `/compact` operation. Saves a state snapshot to `~/.claude/flode_code_styles/snapshots/`, resets the tool use counter for the new context window, and keeps the five most recent snapshots. When the new context opens, `session-start` reads the persisted state and reports it.
 
 ### `session-end`
 
-Fires when the session closes. Writes a session record (tool use count, timestamp) to `~/.claude/ea-flood-r-skills/session-state.json` for `session-start` to report next time.
+Fires when the session closes. Writes a session record (tool use count, timestamp) to `~/.claude/flode_code_styles/session-state.json` for `session-start` to report next time.
 
 ### `doc-blocker`
 
@@ -243,14 +243,14 @@ For performance work, say so explicitly -- `r-performance` loads on mentions of 
 **Note: the `.claude` directory is a dotfolder and will not appear in Finder or Windows Explorer drag-and-drop. Use git on the command line.**
 
 ```bash
-git clone https://github.com/[your-org]/ea-flood-r-skills.git
+git clone https://github.com/JonPayneEA/flode_code_styles.git
 cd /path/to/your/project
 
 # Copy configuration into your project
-cp -r /path/to/ea-flood-r-skills/.claude .
-cp -r /path/to/ea-flood-r-skills/rules .
-cp -r /path/to/ea-flood-r-skills/commands .
-cp -r /path/to/ea-flood-r-skills/agents .
+cp -r /path/to/flode_code_styles/.claude .
+cp -r /path/to/flode_code_styles/rules .
+cp -r /path/to/flode_code_styles/commands .
+cp -r /path/to/flode_code_styles/agents .
 
 # Stage and commit -- git handles dotfiles without issue
 git add .claude rules commands agents
