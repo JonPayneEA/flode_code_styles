@@ -3,7 +3,7 @@ const fs   = require("fs");
 const path = require("path");
 const os   = require("os");
 
-const STATE_DIR  = path.join(os.homedir(), ".claude", "ea-flood-r-skills");
+const STATE_DIR  = path.join(os.homedir(), ".claude", "flode_code_styles");
 const STATE_FILE = path.join(STATE_DIR, "session-state.json");
 
 function ensureStateDir() {
