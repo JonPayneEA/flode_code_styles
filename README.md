@@ -4,6 +4,8 @@ Claude Code configuration for the Environment Agency Flood Forecasting team. Enc
 
 Built on the structure of [ab604/claude-code-r-skills](https://github.com/ab604/claude-code-r-skills). Adapted to replace tidyverse with the fastverse, align with *R Tool Governance v1.3*, and add EA-specific domain knowledge.
 
+**New to the team?** Start with [Flode code style, explained](docs/style-guide-explained.md), a plain-language walk through the standards with examples.
+
 ---
 
 ## Contents

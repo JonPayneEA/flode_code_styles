@@ -15,7 +15,7 @@ When the user invokes `/code-review` on a file or selection, perform a structure
 - [ ] `Dependencies` field lists all non-base packages
 
 **Ecosystem (Tier 3 and Flode only)**
-- [ ] No `library(dplyr)`, `library(purrr)`, `library(readr)`, `library(tibble)`, `library(tidyr)`, `library(lubridate)`
+- [ ] No `library(dplyr)`, `library(purrr)`, `library(readr)`, `library(tibble)`, `library(tidyr)`, `library(stringr)`, `library(lubridate)` (except in `reach.utils`)
 - [ ] No `dplyr::`, `purrr::`, `readr::` qualified calls
 - [ ] No `read.csv()`, `write.csv()` -- use `fread()`, `fwrite()`
 - [ ] No `save()`, `load()`, `.RData` files -- use `saveRDS()`, `readRDS()`, Parquet

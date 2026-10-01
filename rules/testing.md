@@ -47,3 +47,17 @@ renv::status()
 ```
 
 Never submit a Tier 3 merge request without passing all four checks locally first.
+
+## Continuous integration
+
+Every reach package runs the shared workflow `.github/workflows/r-package-ci.yaml` in this repository, called from the package's own `.github/workflows/ci.yaml`:
+
+```yaml
+jobs:
+  ci:
+    uses: JonPayneEA/flode_code_styles/.github/workflows/r-package-ci.yaml@main
+    with:
+      tier: 3
+```
+
+`tier` is the package's governance tier. R CMD check blocks at every tier. At Tier 3 the 70% coverage floor and `lintr` also block; below Tier 3 they report to the job summary only. A package without its own `.lintr` is linted with the house config from the `r-style-guide` skill. `renv::status()` is not yet checked in CI, because no package has a lockfile.

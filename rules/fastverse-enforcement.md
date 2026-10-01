@@ -4,7 +4,7 @@ The team's production ecosystem is the fastverse. Tidyverse packages are banned 
 
 ## Banned packages in Tier 3 and Flode
 
-The following packages must not appear in `library()` calls, `Imports:` in `DESCRIPTION`, or `::` qualified calls in any file with `Tier: 1` in its header block, or in any file under `operational/`, or in any `reach.*` module:
+The following packages must not appear in `library()` calls, `Imports:` in `DESCRIPTION`, or `::` qualified calls in any file with `Tier: 3` in its header block, or in any file under `operational/`, or in any `reach.*` module:
 
 - `dplyr`
 - `tidyr`
@@ -13,8 +13,12 @@ The following packages must not appear in `library()` calls, `Imports:` in `DESC
 - `tibble`
 - `stringr` (use base R or `collapse` string functions)
 - `forcats`
-- `lubridate` (use `data.table` date functions)
-- `ggplot2` is the exception: acceptable in `reach.viz` and Tier 2 analytical work
+- `lubridate` (use `data.table` date functions, or the `reach.utils` date-time helpers)
+
+Two exceptions:
+
+- **`lubridate` inside `reach.utils` only.** `reach.utils` owns date and time handling in the Flode module map, and wraps `lubridate` for the operations `data.table` lacks: flexible parsing, and flooring or rounding to arbitrary units. Every other package calls those wrappers (`as_utc()`, `parse_datetime()`, `floor_to()`, `snap_to_datetime()`) instead of importing `lubridate`, so the dependency lives in one place.
+- **`ggplot2` for plotting, in any `reach.*` package and in Tier 2 work.** It is a graphics package, not a data-manipulation one, and the fastverse has no equivalent. House themes come from `reach.viz`. Data preparation for a plot still follows this rule.
 
 ## Required replacements
 
@@ -27,7 +31,9 @@ The following packages must not appear in `library()` calls, `Imports:` in `DESC
 | `tidyr::pivot_longer()`, `pivot_wider()` | `data.table::melt()`, `dcast()` |
 | `tibble::tibble()` | `data.table::data.table()` |
 | `lubridate::year()` etc. | `data.table::year()`, `month()`, `yday()` |
+| `lubridate::floor_date()`, `round_date()`, `ymd_hms()` | `reach.utils::floor_to()`, `snap_to_datetime()`, `parse_datetime()` |
 | `stringr::str_detect()` | `grepl()` or `collapse` equivalents |
+| `stringr::str_match()` | `regmatches(x, regexec(pattern, x))` |
 | `purrr::map2()`, `pmap()` | `mapply()` or list column patterns |
 
 ## Acceptable uses of tidyverse

@@ -1,0 +1,207 @@
+# Shared CI for reach.* R packages. Each package calls this from its own
+# .github/workflows/ci.yaml and declares its governance tier.
+#
+# Enforces rules/testing.md:
+#   - R CMD check blocks at every tier.
+#   - covr's 70% line-coverage floor and lintr block at Tier 3; below Tier 3
+#     both run and report to the job summary but never fail the build.
+#
+# Derived from reach.rate's workflows and the r-lib/actions v2 examples.
+name: r-package-ci
+
+on:
+  workflow_call:
+    inputs:
+      tier:
+        description: Governance tier of the calling package (1, 2 or 3).
+        required: true
+        type: number
+      coverage-threshold:
+        description: Minimum line coverage (%) enforced at Tier 3.
+        required: false
+        type: number
+        default: 70
+
+permissions:
+  contents: read
+
+jobs:
+  R-CMD-check:
+    runs-on: ${{ matrix.config.os }}
+    name: check ${{ matrix.config.os }} (${{ matrix.config.r }})
+
+    # reach.rate's supported-environment matrix: Windows for DASH and
+    # desktop use, Ubuntu for servers, each on current and previous R.
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - {os: windows-latest, r: 'release'}
+          - {os: windows-latest, r: 'oldrel-1'}
+          - {os: ubuntu-latest,  r: 'release'}
+          - {os: ubuntu-latest,  r: 'oldrel-1'}
+
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      R_KEEP_PKG_SOURCE: yes
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-pandoc@v2
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: ${{ matrix.config.r }}
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::rcmdcheck
+          needs: check
+
+      # Builds and checks vignettes too. Fails on any ERROR or WARNING.
+      - uses: r-lib/actions/check-r-package@v2
+        with:
+          upload-snapshots: true
+          build_args: 'c("--no-manual", "--compact-vignettes=gs+qpdf")'
+
+  coverage:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      TIER: ${{ inputs.tier }}
+      COVERAGE_THRESHOLD: ${{ inputs.coverage-threshold }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::covr, any::xml2
+          needs: coverage
+
+      - name: Test coverage
+        run: |
+          cov <- covr::package_coverage(
+            quiet = FALSE,
+            clean = FALSE,
+            install_path = file.path(normalizePath(Sys.getenv("RUNNER_TEMP"), winslash = "/"), "package")
+          )
+          print(cov)
+
+          pct       <- covr::percent_coverage(cov)
+          tier      <- as.integer(Sys.getenv("TIER"))
+          threshold <- as.numeric(Sys.getenv("COVERAGE_THRESHOLD"))
+          blocking  <- tier >= 3L
+
+          by_file <- covr::tally_coverage(cov, by = "line")
+          by_file <- aggregate(value ~ filename, data = by_file, FUN = function(v) 100 * mean(v > 0))
+          by_file <- by_file[order(by_file$value), ]
+
+          verdict <- if (!blocking) {
+            sprintf("Tier %d: advisory, the %.0f%% floor applies at Tier 3 only.", tier, threshold)
+          } else if (pct >= threshold) {
+            sprintf("Tier %d: meets the %.0f%% floor.", tier, threshold)
+          } else {
+            sprintf("Tier %d: **below the %.0f%% floor. Blocks merge.**", tier, threshold)
+          }
+
+          writeLines(c(
+            "## Test coverage",
+            "",
+            sprintf("**%.1f%%** line coverage overall. %s", pct, verdict),
+            "",
+            "| File | Line coverage |",
+            "|---|---|",
+            sprintf("| `%s` | %.1f%% |", by_file$filename, by_file$value)
+          ), Sys.getenv("GITHUB_STEP_SUMMARY"))
+
+          covr::to_cobertura(cov)
+
+          if (blocking && pct < threshold) {
+            message(sprintf("::error::Line coverage %.1f%% is below the Tier 3 floor of %.0f%%.",
+                            pct, threshold))
+            quit(status = 1L)
+          }
+        shell: Rscript {0}
+
+      - name: Show testthat output
+        if: always()
+        run: |
+          find '${{ runner.temp }}/package' -name 'testthat.Rout*' -exec cat '{}' \; || true
+        shell: bash
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-cobertura
+          path: cobertura.xml
+          if-no-files-found: warn
+
+      - name: Upload test results on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-test-failures
+          path: ${{ runner.temp }}/package
+
+  lint:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      TIER: ${{ inputs.tier }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::lintr, local::.
+          needs: lint
+
+      # The house config from the r-style-guide skill, plus naming styles the
+      # same guide mandates (UpperCamelCase Flode classes, UPPER_SNAKE_CASE
+      # constants), which lintr's default object_name_linter would flag.
+      # A package's own .lintr takes precedence.
+      - name: Apply house lintr config when the package has none
+        if: hashFiles('.lintr') == ''
+        run: |
+          writeLines(c(
+            "linters: linters_with_defaults(",
+            "    line_length_linter(100),",
+            "    assignment_linter(),",
+            "    object_name_linter(styles = c(\"snake_case\", \"symbols\", \"CamelCase\", \"SNAKE_CASE\"))",
+            "  )"
+          ), ".lintr")
+        shell: Rscript {0}
+
+      - name: Lint
+        run: |
+          lints    <- lintr::lint_package()
+          print(lints)
+          n        <- length(lints)
+          tier     <- as.integer(Sys.getenv("TIER"))
+          blocking <- tier >= 3L
+
+          writeLines(c(
+            "## lintr",
+            "",
+            sprintf("**%d** lint(s). Tier %d: %s.", n, tier,
+                    if (blocking) "blocking" else "advisory")
+          ), Sys.getenv("GITHUB_STEP_SUMMARY"))
+
+          if (blocking && n > 0L) {
+            message(sprintf("::error::%d lint(s) found; lintr blocks merge at Tier 3.", n))
+            quit(status = 1L)
+          }
+        shell: Rscript {0}
