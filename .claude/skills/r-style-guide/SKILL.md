@@ -252,22 +252,23 @@ Never use `try()` in Tier 3 code. It returns the error object silently; `tryCatc
 
 ## 9. Logging
 
-Use `logger` for structured logging in operational tools. It produces machine-readable output suitable for log aggregation.
+Inside `reach.*` packages, log through the `reach.utils` helpers. `reach.utils` owns logging in the Flode module map, so every package reports in the same timestamped format.
 
 ```r
-library(logger)
+# Variables in braces interpolate from the calling function
+reach.utils::log_info("Processing station {station_id}: {nrow(flow_dt)} records")
+reach.utils::log_warn("Gap detected in station {station_id}: {gap_n} missing steps")
+reach.utils::log_error("Failed to load NWP grid: {nc_path}")  # also stops execution
 
-# Set log level for the script (INFO for operational runs; DEBUG for diagnostics)
-log_threshold(INFO)
+# Diagnostic detail, shown only when options(reach.utils.log_level = "debug")
+reach.utils::log_debug("Chunk {i} of {n_chunks}")
 
-# Structured log messages -- use glue-style interpolation
-log_info("Processing station {station_id}: {nrow(flow_dt)} records")
-log_warn("Gap detected in station {station_id}: {gap_n} missing steps")
-log_error("Failed to load NWP grid: {nc_path}")
-
-# Redirect log output to a file for operational pipelines
-log_appender(appender_file(here("logs", paste0(Sys.Date(), "_pipeline.log"))))
+# Plain-text record for scheduled runs
+log_path <- here("logs", paste0(format(Sys.time(), "%Y-%m-%d", tz = "UTC"), "_pipeline.log"))
+reach.utils::log_to_file(log_path, "Backfill complete")
 ```
+
+Standalone operational scripts outside the packages may use `logger` instead, for its thresholds and appenders. Do not attach both in one session: they share function names such as `log_info()`.
 
 Do not use `message()`, `cat()`, or `print()` for operational logging. They produce unstructured output with no severity level and cannot be redirected or filtered.
 

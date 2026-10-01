@@ -23,14 +23,14 @@ Work through every item. Do not skip categories.
 Check for banned imports and function calls. Use Grep to search:
 
 ```bash
-grep -n "library(dplyr)\|library(purrr)\|library(readr)\|library(tibble)\|library(tidyr)\|library(lubridate)" [file]
-grep -n "dplyr::\|purrr::\|readr::" [file]
+grep -n "library(dplyr)\|library(purrr)\|library(readr)\|library(tibble)\|library(tidyr)\|library(stringr)\|library(lubridate)" [file]
+grep -n "dplyr::\|purrr::\|readr::\|stringr::\|lubridate::" [file]
 grep -n "read\.csv\|write\.csv\|read_csv\|write_csv" [file]
 grep -n "\.RData\|save(\|load(" [file]
 grep -n "sapply(" [file]
 ```
 
-Each hit is a blocking issue for Tier 3. Provide the replacement.
+Each hit is a blocking issue for Tier 3, except `lubridate` inside `reach.utils`, which is permitted. Provide the replacement.
 
 ### 3. File format (blocking for Tier 3 and Tier 2)
 

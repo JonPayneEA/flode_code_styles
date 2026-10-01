@@ -15,7 +15,7 @@ New Flode classes use S7 by default. The choice of OOP system is determined by t
 |---|---|---|
 | **S7** (default) | Defining any new exported Flode class; formal typed properties; validated contracts | Rapid Tier 1 prototyping where formality adds no value |
 | **R6** | Stateful objects with a lifecycle (`initialize` / `finalize`); reference semantics genuinely required (e.g. connection objects, mutable caches) | General data representation -- use S7 instead |
-| **S3** | Lightweight method dispatch: `print`, `summary`, `format` for existing Flode classes; extending external package generics | New exported Flode classes -- use S7 |
+| **S3** | Lightweight method dispatch: `print`, `summary`, `format` for existing Flode classes; extending external package generics; subclassing `data.table` (S7 objects cannot be data.tables) | New exported Flode classes -- use S7 |
 | **S4** | Interoperability with `terra`, `sp`, `sf` only where method dispatch across these packages is required | All new development; do not use S4 for new Flode classes |
 
 If you find yourself reaching for S4 outside of spatial interoperability, use S7 instead.
@@ -85,6 +85,23 @@ method(calc_qmed, FlodeCatchment) <- function(catchment) {
 }
 ```
 
+### Checking classes across packages
+
+An S7 class defined inside a package carries a namespaced class name: an object of reach.io's `FlodeFlow_Daily` has `class(x)[1] == "reach.io::FlodeFlow_Daily"`. A check against the bare name never matches a real object.
+
+```r
+# When the other package is loaded (Imports)
+S7::S7_inherits(x, reach.io::FlodeFlow_Daily)
+
+# When it is only in Suggests and may be absent, match the full name
+inherits(x, "reach.io::FlodeFlow_Daily")
+
+# Wrong: never TRUE for a real reach.io object
+inherits(x, "FlodeFlow_Daily")
+```
+
+Test cross-package checks against real objects built with the other package's constructor, skipped when it is not installed. A plain list given the bare class name passes the wrong check and hides the bug.
+
 ---
 
 ## 3. R6: stateful lifecycle objects
@@ -149,10 +166,12 @@ FEWSConnection <- R6Class(
 
 Use S3 for `print`, `summary`, `format`, and `plot` methods on existing Flode classes, or to extend external generic functions.
 
+### Print and summary methods for S7 classes
+
+A method named `print.FlodeForecast` does not dispatch for an S7 class defined in a package, because the object's class is `"reach.hydro::FlodeForecast"` (see *Checking classes across packages*). S7's own `print.S7_object` also ignores `S7::method(print, ...)`. Register the method by its namespaced class name in `.onLoad`, as reach.io and reach.hydro do:
+
 ```r
-# Adding a print method for a FlodeForecast object
-# (Assuming FlodeForecast is an S7 class)
-print.FlodeForecast <- function(x, ...) {
+.print_FlodeForecast <- function(x, ...) {
   cat("<FlodeForecast>\n")
   cat("  Station: ", x@station_id, "\n")
   cat("  Issued:  ", format(x@issued_dt), "\n")
@@ -161,12 +180,33 @@ print.FlodeForecast <- function(x, ...) {
   invisible(x)
 }
 
-# summary method
-summary.FlodeForecast <- function(object, ...) {
-  cat("Forecast summary for station", object@station_id, "\n")
-  # ... quantile table etc.
+.onLoad <- function(libname, pkgname) {
+  registerS3method("print", "reach.hydro::FlodeForecast",
+                   .print_FlodeForecast, envir = asNamespace(pkgname))
 }
 ```
+
+### data.table subclasses
+
+A class whose instances must still behave as a `data.table` stays S3: S7 objects cannot be data.tables, and data.table's own dispatch relies on the S3 class vector. reach.hydro's `pdm()` output is the model:
+
+```r
+new_reach_hydro_result <- function(dt, params, Smax) {
+  structure(dt,
+            class  = c("ReachHydroResult", "data.table", "data.frame"),
+            params = params,
+            Smax   = Smax)
+}
+
+print.ReachHydroResult   <- function(x, ...) { ... }
+summary.ReachHydroResult <- function(object, ...) { ... }
+```
+
+Plain S3 method names work here because the class string carries no namespace.
+
+### Parameter lists in hot loops
+
+Leave an existing S3 parameter list alone while it is read inside a per-timestep loop, as `PdmParams` is in `pdm()`. S7's `@` access and validation cost more than `$` on a list, paid on every timestep. Profile before converting (see `r-performance`).
 
 ---
 
@@ -204,6 +244,12 @@ class(x) <- "FlodeCatchment"  # Use new_class() in S7 or R6Class()
 
 # Naming without Flode prefix for exported class
 Catchment <- new_class("Catchment", ...)  # should be FlodeCatchment
+
+# Bare class name for an S7 class from another package
+inherits(x, "FlodeFlow_Daily")  # use "reach.io::FlodeFlow_Daily" or S7_inherits()
+
+# S3-style print method for an S7 class in a package
+print.FlodeForecast <- function(x, ...) { ... }  # never dispatches; register in .onLoad
 ```
 
 ---

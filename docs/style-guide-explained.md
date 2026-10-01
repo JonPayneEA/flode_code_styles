@@ -130,7 +130,7 @@ This is the rule newcomers notice first. The team uses the *fastverse*: `data.ta
 
 **Why:** `data.table` is fast on large gauge records and ensembles, it changes data in place instead of copying it, and it has very few dependencies. Fewer dependencies means fewer things that can break when a package updates the night before a flood.
 
-**The banned list**, for Tier 3 code and every `reach.*` package: `dplyr`, `tidyr`, `purrr`, `readr`, `tibble`, `stringr`, `forcats` and `lubridate`.
+**The banned list**, for Tier 3 code and every `reach.*` package: `dplyr`, `tidyr`, `purrr`, `readr`, `tibble`, `stringr`, `forcats` and `lubridate`. The one exception is `lubridate` inside reach.utils, which wraps it so nobody else has to: call `reach.utils::floor_to()`, `snap_to_datetime()` or `parse_datetime()` instead.
 
 **The common translations:**
 
@@ -146,7 +146,7 @@ This is the rule newcomers notice first. The team uses the *fastverse*: `data.ta
 
 One thing catches people out: **`:=` changes the original table**, not a copy. If you need the original intact, take a copy first with `copy(dt)`.
 
-**Where the tidyverse is allowed:** Tier 1 exploration, vignettes written for outside readers, and one-off scripts that will never be promoted. `ggplot2` is allowed in `reach.viz` and Tier 2 work. When reading Parquet with `arrow`, you may use `dplyr::filter()` and `select()` before `collect()`; that is `arrow`'s query language, not data manipulation.
+**Where the tidyverse is allowed:** Tier 1 exploration, vignettes written for outside readers, and one-off scripts that will never be promoted. `ggplot2` is allowed for plotting in any reach package, with house themes from `reach.viz`. When reading Parquet with `arrow`, you may use `dplyr::filter()` and `select()` before `collect()`; that is `arrow`'s query language, not data manipulation.
 
 The [`fastverse-patterns`](../.claude/skills/fastverse-patterns/SKILL.md) skill has the full set of patterns.
 
@@ -232,6 +232,8 @@ You will not need classes often. When you do, pick the system by what the class 
 
 New classes take the `Flode` prefix: `FlodeCatchment`, not `Catchment`. Read properties with `@`, as in `catchment@area_km2`.
 
+To check whether an object is another package's class, use `S7::S7_inherits(x, reach.io::FlodeFlow_Daily)`. Classes made inside a package carry the package name, so `inherits(x, "FlodeFlow_Daily")` never matches.
+
 ---
 
 ## 10. Settings and logging
@@ -245,7 +247,7 @@ timestep_min: 15
 threshold_cms: 50.0
 ```
 
-**Log, do not print.** `print()`, `cat()` and `message()` leave no record of severity and cannot be sent to a file. Use the `logger` package, or the `log_info()`, `log_warn()` and `log_error()` helpers in reach.utils.
+**Log, do not print.** `print()`, `cat()` and `message()` leave no record of severity and cannot be sent to a file. Inside reach packages, use the reach.utils helpers: `log_info()`, `log_warn()`, `log_error()` and `log_debug()`. Write `log_info("Loaded {n} gauges")` and `{n}` fills in from your function. Standalone scripts may use the `logger` package instead, but never load both: they share function names.
 
 ---
 
