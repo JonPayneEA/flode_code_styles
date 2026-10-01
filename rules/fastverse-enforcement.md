@@ -4,7 +4,7 @@ The team's production ecosystem is the fastverse. Tidyverse packages are banned 
 
 ## Banned packages in Tier 3 and Flode
 
-The following packages must not appear in `library()` calls, `Imports:` in `DESCRIPTION`, or `::` qualified calls in any file with `Tier: 1` in its header block, or in any file under `operational/`, or in any `reach.*` module:
+The following packages must not appear in `library()` calls, `Imports:` in `DESCRIPTION`, or `::` qualified calls in any file with `Tier: 3` in its header block, or in any file under `operational/`, or in any `reach.*` module:
 
 - `dplyr`
 - `tidyr`
